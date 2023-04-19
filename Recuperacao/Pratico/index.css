@@ -1,0 +1,53 @@
+@media screen and (max-width: 790px) {
+    .box {
+        width: 100%;
+    }
+
+    .formulario-notas {
+        width: 100%;
+    }
+}
+
+
+body{
+    background-color: #bebebe;
+}
+ 
+
+.formulario-notas{
+    text-align: left;
+    margin-top: 50px;
+    
+}
+
+h1{
+    text-align: center;
+}
+
+button {
+    width: 100%;
+    background-color: #5cb85c;
+    border: none;
+    font-size: 20px;
+    padding: 15px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+input{
+    box-sizing: border-box;
+    width: 20%;
+    border-radius: 5px;
+    border: 1px solid #000000;
+    margin-bottom: 20px;
+    padding: 10px;
+}
+label{
+    text-align: center;
+    font-weight: bold;
+    font-size: 20px;
+    margin-top: 20px;
+}
+
+
