@@ -18,4 +18,5 @@ public class Mensagem {
     private String message;
     private String data;
     private Status status;
+    private String file;
 }
