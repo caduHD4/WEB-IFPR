@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from "react";
 import SockJS from "sockjs-client";
 import { over } from "stompjs";
-import EmojiPicker from 'emoji-picker-react';
+import EmojiPicker from "emoji-picker-react";
+import MenuIcon from "@material-ui/icons/Menu";
+import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
 import {
   AppBar,
   Button,
+  Slide,
   Card,
   Divider,
   Grid,
@@ -22,8 +25,21 @@ import {
 import ChatIcon from "@material-ui/icons/Chat";
 import SendIcon from "@material-ui/icons/Send";
 import PhotoCamera from "@material-ui/icons/PhotoCamera";
-import InsertEmoticonIcon from '@material-ui/icons/InsertEmoticon';
+import InsertEmoticonIcon from "@material-ui/icons/InsertEmoticon";
 import "./Chat.css";
+import { dark } from "@material-ui/core/styles/createPalette";
+
+// Crie um tema personalizado
+const theme = createMuiTheme({
+  palette: {
+    primary: {
+      main: '#303030', // Cor de fundo escura
+    },
+    text: {
+      primary: '#fff', // Cor do texto clara
+    },
+  },
+});
 
 var stompClient = null;
 
@@ -37,6 +53,8 @@ const ChatRoom = () => {
     connected: false,
     message: "",
   });
+
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     console.log(userData);
@@ -66,19 +84,18 @@ const ChatRoom = () => {
     stompClient.send("/app/message", {}, JSON.stringify(chatMessage));
   };
 
-const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-const [chosenEmoji, setChosenEmoji] = useState(null);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [chosenEmoji, setChosenEmoji] = useState(null);
 
-const onEmojiClick = (event, emojiObject) => {
-  setChosenEmoji(emojiObject.emoji); 
-};
+  const onEmojiClick = (event, emojiObject) => {
+    setChosenEmoji(emojiObject.emoji);
+  };
 
-useEffect(() => {
-  if (chosenEmoji) {
-    setUserData({ ...userData, message: userData.message + chosenEmoji });
-  }
-}, [chosenEmoji]);
-
+  useEffect(() => {
+    if (chosenEmoji) {
+      setUserData({ ...userData, message: userData.message + chosenEmoji });
+    }
+  }, [chosenEmoji]);
 
   const onMessageReceived = (payload) => {
     console.log("RECEBENDO MENSAGEM");
@@ -167,6 +184,7 @@ useEffect(() => {
     connect();
   };
 
+
   // Renderização condicional para mostrar o registro ou o chat
   if (!userData.connected) {
     return (
@@ -174,14 +192,14 @@ useEffect(() => {
         <div className="register">
           <input
             id="user-name"
-            placeholder="Enter your name"
+            placeholder="Digite seu nick"
             name="userName"
             value={userData.username}
             onChange={handleUsername}
             margin="normal"
           />
-          <button type="button" onClick={registerUser}>
-            connect
+          <button type="button" onClick={registerUser} style={{margin:"12px"}}>
+            conectar
           </button>
         </div>
       </div>
@@ -189,47 +207,63 @@ useEffect(() => {
   }
 
   return (
-    <Grid container>
+    <Grid container className="dark-container">
+          <ThemeProvider theme={theme}>
       <AppBar position="static">
         <Toolbar>
+          <IconButton
+            edge="start"
+            color="inherit"
+            aria-label="menu"
+            onClick={() => setMenuOpen(!menuOpen)}
+          >
+            <MenuIcon />
+          </IconButton>
           <Typography variant="h6" style={{ flexGrow: 1 }}>
             Zap2
           </Typography>
         </Toolbar>
       </AppBar>
-      <Grid item xs={3}>
-        <Paper style={{ borderRadius: "12px" }}>
-          <List>
-            <ListItem
-              button
-              onClick={() => {
-                setTab("CHATROOM");
-              }}
-              className={`member ${tab === "CHATROOM" && "active"}`}
-            >
-              <ListItemIcon>
-                <ChatIcon />
-              </ListItemIcon>
-              <ListItemText primary="Chatroom" />
-            </ListItem>
-            {[...privateChats.keys()].map((name, index) => (
+      </ThemeProvider>
+      {menuOpen && (
+        <Slide direction="right" in={menuOpen} mountOnEnter unmountOnExit>
+        <Grid item xs={3}>
+          <Paper style={{ borderRadius: "4px", background:"#434343"}}>
+            <List>
               <ListItem
                 button
                 onClick={() => {
-                  setTab(name);
+                  setTab("CHATROOM");
                 }}
-                className={`member ${tab === name && "active"}`}
-                key={index}
+                className={`member ${tab === "CHATROOM" && "active"}`}
               >
                 <ListItemIcon>
                   <ChatIcon />
                 </ListItemIcon>
-                <ListItemText primary={name} />
+                <ListItemText primary="Chatroom" />
               </ListItem>
-            ))}
-          </List>
-        </Paper>
-      </Grid>
+              {[...privateChats.keys()].map((name, index) => (
+                <ListItem
+                  button
+                  onClick={() => {
+                    setTab(name);
+                  }}
+                  className={`member ${tab === name && "active"}`}
+                  key={index}
+                >
+                  <ListItemIcon>
+                    <ChatIcon />
+                  </ListItemIcon>
+                  <ListItemText primary={name} />
+                </ListItem>
+              ))}
+            </List>
+          </Paper>
+        </Grid>
+       </Slide>
+
+      )}
+      
       <Grid item xs={9}>
         <Paper
           style={{
@@ -238,14 +272,14 @@ useEffect(() => {
             overflowY: "auto",
           }}
         >
-          <div
+          <div className="div-chat"
             style={{
-              height: "calc(100% - 80px)",
+              height: "calc(100% - 50px)",
               padding: "16px",
             }}
           >
             {tab === "CHATROOM" && (
-              <ul className="chat-messages">
+              <ul className="chat-messages" style={{borderRadius: "12px"}}>
                 {publicChats.map((chat, index) => (
                   <li className={`message`} key={index}>
                     <div className="avatar">{chat.senderName}</div>
@@ -255,7 +289,7 @@ useEffect(() => {
               </ul>
             )}
             {tab !== "CHATROOM" && (
-              <ul className="chat-messages">
+              <ul className="chat-messages" style={{borderRadius: "12px"}}>
                 {[...privateChats.get(tab)].map((chat, index) => (
                   <li className={`message`} key={index}>
                     <div className="avatar">{chat.senderName}</div>
@@ -273,31 +307,19 @@ useEffect(() => {
               padding: "10px",
               position: "sticky",
               bottom: "0",
-              backgroundColor: "#fff",
+              backgroundColor: "#434343",
               borderRadius: "12px",
             }}
           >
-            <input
-              accept="image/*,video/*"
-              style={{ display: "none" }}
-              id="icon-button-file"
-              type="file"
-              onChange={handleCapture}
-            />
-            <label htmlFor="icon-button-file">
-              <IconButton color="primary" component="span">
-                <PhotoCamera />
-              </IconButton>
-            </label>
             <IconButton onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
-  <InsertEmoticonIcon />
-</IconButton>
-{showEmojiPicker && (
-  <div>
-    <EmojiPicker onEmojiClick={onEmojiClick} />
-  </div>
-)}
-            <TextField
+              <InsertEmoticonIcon />
+            </IconButton>
+            {showEmojiPicker && (
+              <div>
+                <EmojiPicker onEmojiClick={onEmojiClick} />
+              </div>
+            )}
+            <TextField className="input-chat"
               multiline
               rows={3}
               placeholder="Digite sua mensagem aqui"
@@ -316,7 +338,7 @@ useEffect(() => {
                         onClick={sendValue}
                         style={{ borderRadius: "12px" }}
                       >
-                        Send
+                        Enviar
                       </Button>
                     ) : (
                       <Button
@@ -326,7 +348,7 @@ useEffect(() => {
                         onClick={sendPrivateValue}
                         style={{ borderRadius: "12px" }}
                       >
-                        Send
+                        Enviar
                       </Button>
                     )}
                   </InputAdornment>

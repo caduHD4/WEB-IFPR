@@ -16,19 +16,16 @@ input {
   padding: 10px;
   font-size: 1.2em;
 }
+
 button{
   border: none;
   padding: 10px;
-  background: green;
+  background: #3f51b5;
   color:#fff;
   font-size: 1.2em;
   font-weight: bold;
 }
 
-
-.container{
-  position: relative;
-}
 
 .register{
   position: fixed;
@@ -89,15 +86,14 @@ ul {
   border:#000;
   cursor: pointer;
   margin: 5px 2px;
-  box-shadow: 0 8px 8px -4px lightblue;
 }
 .member.active{
-  background: blueviolet;
+  background: #3f51b5;
   color:#fff;
 }
 .member:hover{
-  background: grey;
-  color:#fff;
+  background: rgb(62, 50, 50);
+  color:#ffffff;
 }
 
 .avatar{
@@ -115,7 +111,7 @@ ul {
   width: auto;
   display: flex;
   flex-direction: row;
-  box-shadow: 0 3px 10px rgb(0 0 0 / 0.2);
+  box-shadow: 0 3px 10px rgba(0, 0, 0, 0.2);
   margin: 5px 10px;
 }
 .message-data{
