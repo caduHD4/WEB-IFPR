@@ -3,6 +3,7 @@ import SockJS from "sockjs-client";
 import { over } from "stompjs";
 import EmojiPicker from "emoji-picker-react";
 import MenuIcon from "@material-ui/icons/Menu";
+import axios from "axios";
 import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
 import {
   AppBar,
@@ -47,6 +48,9 @@ const ChatRoom = () => {
   const [privateChats, setPrivateChats] = useState(new Map());
   const [publicChats, setPublicChats] = useState([]);
   const [tab, setTab] = useState("CHATROOM");
+  const [autoReply, setAutoReply] = useState(false);
+  const [autoReplyMessage, setAutoReplyMessage] = useState("");
+  const [result, setResult] = useState("");
   const [userData, setUserData] = useState({
     username: "",
     receivername: "",
@@ -98,7 +102,6 @@ const ChatRoom = () => {
   }, [chosenEmoji]);
 
   const onMessageReceived = (payload) => {
-    console.log("RECEBENDO MENSAGEM");
     var payloadData = JSON.parse(payload.body);
     switch (payloadData.status) {
       case "JOIN":
@@ -107,12 +110,24 @@ const ChatRoom = () => {
           setPrivateChats(new Map(privateChats));
         }
         break;
-      case "MESSAGE":
-        publicChats.push(payloadData);
-        setPublicChats([...publicChats]);
-        break;
+        case "MESSAGE":
+          generateAndSendReply(payloadData.message);
+          publicChats.push(payloadData);
+          setPublicChats([...publicChats]);
+          break;
     }
   };
+  
+
+  const generateAndSendReply = async (message) => {
+    console.log('Entrou no useEffect')
+    console.log('Prompt = ', message)
+
+    const response = await axios.post("http://localhost:3333/api/call", {prompt: message});
+    console.log(response.data)
+};
+
+
 
   const onPrivateMessage = (payload) => {
     console.log(payload);
@@ -148,14 +163,17 @@ const ChatRoom = () => {
     if (stompClient) {
       var chatMessage = {
         senderName: userData.username,
-        message: userData.message,
+        message: autoReply ? autoReplyMessage : userData.message,
         status: "MESSAGE",
       };
-      console.log(chatMessage);
       stompClient.send("/app/message", {}, JSON.stringify(chatMessage));
       setUserData({ ...userData, message: "" });
+      if (autoReply) {
+        setAutoReplyMessage("");
+      }
     }
   };
+  
 
   const sendPrivateValue = () => {
     if (stompClient) {
@@ -198,7 +216,7 @@ const ChatRoom = () => {
             onChange={handleUsername}
             margin="normal"
           />
-          <button type="button" onClick={registerUser} style={{margin:"12px"}}>
+          <button className="buttonRegister" type="button" onClick={registerUser} style={{margin:"12px"}}>
             conectar
           </button>
         </div>
@@ -311,6 +329,10 @@ const ChatRoom = () => {
               borderRadius: "12px",
             }}
           >
+            <Button onClick={() => setAutoReply(!autoReply)}>
+  {autoReply ? "Desativar Resposta Automática" : "Ativar Resposta Automática"}
+</Button>
+
             <IconButton onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
               <InsertEmoticonIcon />
             </IconButton>
@@ -323,7 +345,7 @@ const ChatRoom = () => {
               multiline
               rows={3}
               placeholder="Digite sua mensagem aqui"
-              value={userData.message}
+              value={autoReply ? autoReplyMessage : userData.message}
               onChange={handleMessage}
               variant="outlined"
               style={{ flexGrow: 1, marginRight: "10px" }}

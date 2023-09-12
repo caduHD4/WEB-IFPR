@@ -4,18 +4,55 @@
   color: #fff;
 }
 
+/*Estilo do resgistro*/
 .container {
-  align-content: center;
-}
-
-
-
-.register {
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: center;
+  justify-content: center;
+  height: 100vh;
 }
+
+.register {
+  background-color: #373737;
+  align-items: center;
+  border-radius: 18px;
+  padding: 20px;
+  box-shadow: 4px 8px 26px 4px rgba(0, 0, 0, 0.48);
+}
+
+input {
+  width: 300px;
+  height: 60px;
+  border-radius: 16px;
+  border: none;
+  outline: none;
+  padding: 10px;
+  font-size: 28px;
+}
+
+.buttonRegister {
+  width: 200px;
+  height: 55px;
+  border: none;
+  cursor: pointer;
+  border-radius: 26px;
+  outline: none;
+  background-color: #3f51b5;
+  color: white;
+  font-size: 22px;
+}
+
+button:hover {
+    background-color: #283593;
+}
+
+@media (max-width:600px) {
+    input, button {
+        width: auto;
+    }
+}
+/*Fim do estilo do resgistro*/
 
 
 .custom-appbar {
@@ -41,6 +78,11 @@
 
 .input-chat{
   background-color: #303030;
+}
+
+.input-chat::placeholder { /* Chrome, Firefox, Opera, Safari 10.1+ */
+  color: #e90a0a;
+  opacity: 1; /* Firefox */
 }
 
 .hamburguer{
