@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import SockJS from "sockjs-client";
 import { over } from "stompjs";
 import EmojiPicker from "emoji-picker-react";
@@ -30,14 +30,14 @@ import InsertEmoticonIcon from "@material-ui/icons/InsertEmoticon";
 import "./Chat.css";
 import { dark } from "@material-ui/core/styles/createPalette";
 
-// Crie um tema personalizado
+// Muda a cor do tela da interface
 const theme = createMuiTheme({
   palette: {
     primary: {
-      main: "#303030", // Cor de fundo escura
+      main: "#303030",
     },
     text: {
-      primary: "#fff", // Cor do texto clara
+      primary: "#fff",
     },
   },
 });
@@ -50,6 +50,7 @@ const ChatRoom = () => {
   const [tab, setTab] = useState("CHATROOM");
   const [result, setResult] = useState("");
   const [autoReply, setAutoReply] = useState(false);
+  const autoReplyRef = useRef(autoReply);
   const [menuOpen, setMenuOpen] = useState(false);
   const [userData, setUserData] = useState({
     username: "",
@@ -62,14 +63,21 @@ const ChatRoom = () => {
     console.log(userData);
   }, [userData]);
 
+  useEffect(() => {
+    autoReplyRef.current = autoReply;
+  }, [autoReply]);
+
+  useEffect(() => {
+    if (result) {
+      sendAutoReply(result);
+      setResult("");
+    }
+  }, [result]);
+
   const connect = () => {
     let sock = new SockJS("http://localhost:8080/ws");
     stompClient = over(sock);
     stompClient.connect({}, onConnected, onError);
-  };
-
-  const toggleAutoReply = () => {
-    setAutoReply(!autoReply);
   };
 
   const onConnected = () => {
@@ -80,6 +88,10 @@ const ChatRoom = () => {
       onPrivateMessage
     );
     userJoin();
+  };
+
+  const toggleAutoReply = () => {
+    setAutoReply(!autoReply);
   };
 
   const userJoin = () => {
@@ -103,8 +115,6 @@ const ChatRoom = () => {
     }
   }, [chosenEmoji]);
 
-  
-
   const onMessageReceived = (payload) => {
     var payloadData = JSON.parse(payload.body);
     switch (payloadData.status) {
@@ -115,26 +125,26 @@ const ChatRoom = () => {
         }
         break;
       case "MESSAGE":
-        console.log(autoReply);
         publicChats.push(payloadData);
         setPublicChats([...publicChats]);
         break;
     }
+    if (
+      autoReplyRef.current === true &&
+      payloadData.senderName !== userData.username
+    ) {
+      generateAndSendReply(
+        payloadData.message,
+        payloadData.senderName,
+        userData.username
+      );
+    }
   };
 
-  
-  const generateAndSendReply = async (message) => {
-    console.log("Prompt = ", message);
-    /*const response = await axios.post("http://localhost:3333/api/call", {
-      prompt: message,
-    });
-    setResult(response.data);
-    console.log(response.data);*/
-  };
-
-
+  // Demorei 10 mil anos pra tentar fazer isso funcionar sem fazer duas requisões na API
+  // Tudo isso por causa do true que não estava entrando no onMessageReceived e no onPrivateMessage
+  // Então lembrei do useRef e deu certo, gloriaaaaaaaaa.
   const onPrivateMessage = (payload) => {
-    console.log(payload);
     var payloadData = JSON.parse(payload.body);
     if (privateChats.get(payloadData.senderName)) {
       privateChats.get(payloadData.senderName).push(payloadData);
@@ -145,6 +155,19 @@ const ChatRoom = () => {
       privateChats.set(payloadData.senderName, list);
       setPrivateChats(new Map(privateChats));
     }
+    if (
+      autoReplyRef.current === true &&
+      payloadData.senderName !== userData.username
+    ) {
+      generateAndSendReply(payloadData.message);
+    }
+  };
+
+  const generateAndSendReply = async (message, senderName, username) => {
+    const response = await axios.post("http://localhost:3333/api/call", {
+      prompt: `Você é ${username}, respondendo a mensagem de ${senderName}. Seja bem educado e conciso em suas respostas, seja muito humano. Mensagem: "${message}"`,
+    });
+    setResult(response.data);
   };
 
   const onError = (err) => {
@@ -154,6 +177,19 @@ const ChatRoom = () => {
   const handleMessage = (event) => {
     const { value } = event.target;
     setUserData({ ...userData, message: value });
+  };
+
+  const sendAutoReply = (message) => {
+    console.log("funcionou muitoooo");
+    if (stompClient) {
+      var chatMessage = {
+        senderName: userData.username,
+        message: message,
+        status: "MESSAGE",
+      };
+      stompClient.send("/app/message", {}, JSON.stringify(chatMessage));
+      setUserData({ ...userData, message: "" });
+    }
   };
 
   const sendValue = () => {
@@ -326,10 +362,13 @@ const ChatRoom = () => {
               borderRadius: "12px",
             }}
           >
-<p>O modo de resposta automática está {autoReply ? "Ligado" : "Desligado"}</p>
-      <button onClick={toggleAutoReply}>
-        {autoReply ? "Desligar Resposta Automática" : "Ativar Resposta Automática"}
-      </button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={toggleAutoReply}
+            >
+              Resposta automática: {autoReply ? "Ligada" : "Desligada"}
+            </Button>
 
             <IconButton onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
               <InsertEmoticonIcon />
