@@ -4,7 +4,7 @@ import { over } from "stompjs";
 import EmojiPicker from "emoji-picker-react";
 import MenuIcon from "@material-ui/icons/Menu";
 import axios from "axios";
-import { createMuiTheme, ThemeProvider } from '@material-ui/core/styles';
+import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
 import {
   AppBar,
   Button,
@@ -34,10 +34,10 @@ import { dark } from "@material-ui/core/styles/createPalette";
 const theme = createMuiTheme({
   palette: {
     primary: {
-      main: '#303030', // Cor de fundo escura
+      main: "#303030", // Cor de fundo escura
     },
     text: {
-      primary: '#fff', // Cor do texto clara
+      primary: "#fff", // Cor do texto clara
     },
   },
 });
@@ -48,17 +48,15 @@ const ChatRoom = () => {
   const [privateChats, setPrivateChats] = useState(new Map());
   const [publicChats, setPublicChats] = useState([]);
   const [tab, setTab] = useState("CHATROOM");
-  const [autoReply, setAutoReply] = useState(false);
-  const [autoReplyMessage, setAutoReplyMessage] = useState("");
   const [result, setResult] = useState("");
+  const [autoReply, setAutoReply] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
   const [userData, setUserData] = useState({
     username: "",
     receivername: "",
     connected: false,
     message: "",
   });
-
-  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     console.log(userData);
@@ -68,6 +66,10 @@ const ChatRoom = () => {
     let sock = new SockJS("http://localhost:8080/ws");
     stompClient = over(sock);
     stompClient.connect({}, onConnected, onError);
+  };
+
+  const toggleAutoReply = () => {
+    setAutoReply(!autoReply);
   };
 
   const onConnected = () => {
@@ -101,6 +103,8 @@ const ChatRoom = () => {
     }
   }, [chosenEmoji]);
 
+  
+
   const onMessageReceived = (payload) => {
     var payloadData = JSON.parse(payload.body);
     switch (payloadData.status) {
@@ -110,23 +114,23 @@ const ChatRoom = () => {
           setPrivateChats(new Map(privateChats));
         }
         break;
-        case "MESSAGE":
-          generateAndSendReply(payloadData.message);
-          publicChats.push(payloadData);
-          setPublicChats([...publicChats]);
-          break;
+      case "MESSAGE":
+        console.log(autoReply);
+        publicChats.push(payloadData);
+        setPublicChats([...publicChats]);
+        break;
     }
   };
+
   
-
   const generateAndSendReply = async (message) => {
-    console.log('Entrou no useEffect')
-    console.log('Prompt = ', message)
-
-    const response = await axios.post("http://localhost:3333/api/call", {prompt: message});
-    console.log(response.data)
-};
-
+    console.log("Prompt = ", message);
+    /*const response = await axios.post("http://localhost:3333/api/call", {
+      prompt: message,
+    });
+    setResult(response.data);
+    console.log(response.data);*/
+  };
 
 
   const onPrivateMessage = (payload) => {
@@ -152,28 +156,17 @@ const ChatRoom = () => {
     setUserData({ ...userData, message: value });
   };
 
-  const [selectedFile, setSelectedFile] = useState();
-
-  const handleCapture = ({ target }) => {
-    setSelectedFile(target.files[0]);
-    // Aqui você pode adicionar a lógica para enviar o arquivo selecionado
-  };
-
   const sendValue = () => {
     if (stompClient) {
       var chatMessage = {
         senderName: userData.username,
-        message: autoReply ? autoReplyMessage : userData.message,
+        message: userData.message,
         status: "MESSAGE",
       };
       stompClient.send("/app/message", {}, JSON.stringify(chatMessage));
       setUserData({ ...userData, message: "" });
-      if (autoReply) {
-        setAutoReplyMessage("");
-      }
     }
   };
-  
 
   const sendPrivateValue = () => {
     if (stompClient) {
@@ -202,7 +195,6 @@ const ChatRoom = () => {
     connect();
   };
 
-
   // Renderização condicional para mostrar o registro ou o chat
   if (!userData.connected) {
     return (
@@ -216,7 +208,12 @@ const ChatRoom = () => {
             onChange={handleUsername}
             margin="normal"
           />
-          <button className="buttonRegister" type="button" onClick={registerUser} style={{margin:"12px"}}>
+          <button
+            className="buttonRegister"
+            type="button"
+            onClick={registerUser}
+            style={{ margin: "12px" }}
+          >
             conectar
           </button>
         </div>
@@ -226,62 +223,61 @@ const ChatRoom = () => {
 
   return (
     <Grid container className="dark-container">
-          <ThemeProvider theme={theme}>
-      <AppBar position="static">
-        <Toolbar>
-          <IconButton
-            edge="start"
-            color="inherit"
-            aria-label="menu"
-            onClick={() => setMenuOpen(!menuOpen)}
-          >
-            <MenuIcon />
-          </IconButton>
-          <Typography variant="h6" style={{ flexGrow: 1 }}>
-            Zap2
-          </Typography>
-        </Toolbar>
-      </AppBar>
+      <ThemeProvider theme={theme}>
+        <AppBar position="static">
+          <Toolbar>
+            <IconButton
+              edge="start"
+              color="inherit"
+              aria-label="menu"
+              onClick={() => setMenuOpen(!menuOpen)}
+            >
+              <MenuIcon />
+            </IconButton>
+            <Typography variant="h6" style={{ flexGrow: 1 }}>
+              Zap2
+            </Typography>
+          </Toolbar>
+        </AppBar>
       </ThemeProvider>
       {menuOpen && (
         <Slide direction="right" in={menuOpen} mountOnEnter unmountOnExit>
-        <Grid item xs={3}>
-          <Paper style={{ borderRadius: "4px", background:"#434343"}}>
-            <List>
-              <ListItem
-                button
-                onClick={() => {
-                  setTab("CHATROOM");
-                }}
-                className={`member ${tab === "CHATROOM" && "active"}`}
-              >
-                <ListItemIcon>
-                  <ChatIcon />
-                </ListItemIcon>
-                <ListItemText primary="Chatroom" />
-              </ListItem>
-              {[...privateChats.keys()].map((name, index) => (
+          <Grid item xs={3}>
+            <Paper style={{ borderRadius: "4px", background: "#434343" }}>
+              <List>
                 <ListItem
                   button
                   onClick={() => {
-                    setTab(name);
+                    setTab("CHATROOM");
                   }}
-                  className={`member ${tab === name && "active"}`}
-                  key={index}
+                  className={`member ${tab === "CHATROOM" && "active"}`}
                 >
                   <ListItemIcon>
                     <ChatIcon />
                   </ListItemIcon>
-                  <ListItemText primary={name} />
+                  <ListItemText primary="Chatroom" />
                 </ListItem>
-              ))}
-            </List>
-          </Paper>
-        </Grid>
-       </Slide>
-
+                {[...privateChats.keys()].map((name, index) => (
+                  <ListItem
+                    button
+                    onClick={() => {
+                      setTab(name);
+                    }}
+                    className={`member ${tab === name && "active"}`}
+                    key={index}
+                  >
+                    <ListItemIcon>
+                      <ChatIcon />
+                    </ListItemIcon>
+                    <ListItemText primary={name} />
+                  </ListItem>
+                ))}
+              </List>
+            </Paper>
+          </Grid>
+        </Slide>
       )}
-      
+
       <Grid item xs={9}>
         <Paper
           style={{
@@ -290,14 +286,15 @@ const ChatRoom = () => {
             overflowY: "auto",
           }}
         >
-          <div className="div-chat"
+          <div
+            className="div-chat"
             style={{
               height: "calc(100% - 50px)",
               padding: "16px",
             }}
           >
             {tab === "CHATROOM" && (
-              <ul className="chat-messages" style={{borderRadius: "12px"}}>
+              <ul className="chat-messages" style={{ borderRadius: "12px" }}>
                 {publicChats.map((chat, index) => (
                   <li className={`message`} key={index}>
                     <div className="avatar">{chat.senderName}</div>
@@ -307,7 +304,7 @@ const ChatRoom = () => {
               </ul>
             )}
             {tab !== "CHATROOM" && (
-              <ul className="chat-messages" style={{borderRadius: "12px"}}>
+              <ul className="chat-messages" style={{ borderRadius: "12px" }}>
                 {[...privateChats.get(tab)].map((chat, index) => (
                   <li className={`message`} key={index}>
                     <div className="avatar">{chat.senderName}</div>
@@ -329,9 +326,10 @@ const ChatRoom = () => {
               borderRadius: "12px",
             }}
           >
-            <Button onClick={() => setAutoReply(!autoReply)}>
-  {autoReply ? "Desativar Resposta Automática" : "Ativar Resposta Automática"}
-</Button>
+<p>O modo de resposta automática está {autoReply ? "Ligado" : "Desligado"}</p>
+      <button onClick={toggleAutoReply}>
+        {autoReply ? "Desligar Resposta Automática" : "Ativar Resposta Automática"}
+      </button>
 
             <IconButton onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
               <InsertEmoticonIcon />
@@ -341,11 +339,12 @@ const ChatRoom = () => {
                 <EmojiPicker onEmojiClick={onEmojiClick} />
               </div>
             )}
-            <TextField className="input-chat"
+            <TextField
+              className="input-chat"
               multiline
               rows={3}
               placeholder="Digite sua mensagem aqui"
-              value={autoReply ? autoReplyMessage : userData.message}
+              value={userData.message}
               onChange={handleMessage}
               variant="outlined"
               style={{ flexGrow: 1, marginRight: "10px" }}
