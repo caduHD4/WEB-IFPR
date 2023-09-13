@@ -159,7 +159,10 @@ const ChatRoom = () => {
       autoReplyRef.current === true &&
       payloadData.senderName !== userData.username
     ) {
-      generateAndSendReply(payloadData.message);
+      generateAndSendReply(
+        payloadData.message,
+        payloadData.senderName,
+        userData.username);
     }
   };
 
