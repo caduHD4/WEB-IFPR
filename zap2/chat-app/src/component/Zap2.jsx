@@ -1,16 +1,5 @@
 import React, { useEffect, useState, useRef } from "react";
-import SockJS from "sockjs-client";
-import { over } from "stompjs";
-import EmojiPicker from "emoji-picker-react";
-import MenuIcon from "@material-ui/icons/Menu";
 import axios from "axios";
-import MicIcon from "@material-ui/icons/Mic";
-import MicOffIcon from "@material-ui/icons/MicOff";
-import AndroidIcon from "@material-ui/icons/Android";
-import SpeechRecognition, {
-  useSpeechRecognition,
-} from "react-speech-recognition";
-import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
 import {
   AppBar,
   Button,
@@ -33,10 +22,20 @@ import {
 import MuiAlert from "@material-ui/lab/Alert";
 import ChatIcon from "@material-ui/icons/Chat";
 import SendIcon from "@material-ui/icons/Send";
-import PhotoCamera from "@material-ui/icons/PhotoCamera";
 import InsertEmoticonIcon from "@material-ui/icons/InsertEmoticon";
+import MicOffIcon from "@material-ui/icons/MicOff";
+import MenuIcon from "@material-ui/icons/Menu";
+import MicIcon from "@material-ui/icons/Mic";
+import AndroidIcon from "@material-ui/icons/Android";
+import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
+import SockJS from "sockjs-client";
+import { over } from "stompjs";
+import EmojiPicker from "emoji-picker-react";
+import SpeechRecognition, {
+  useSpeechRecognition,
+} from "react-speech-recognition";
+import AudioFile from "./assets/audio/zap2.mp3";
 import "./Chat.css";
-import { dark } from "@material-ui/core/styles/createPalette";
 
 // Muda a cor do tela da interface
 const theme = createMuiTheme({
@@ -52,7 +51,7 @@ const theme = createMuiTheme({
 
 var stompClient = null;
 
-const ChatRoom = () => {
+const Zap2 = () => {
   const [privateChats, setPrivateChats] = useState(new Map());
   const [publicChats, setPublicChats] = useState([]);
   const [tab, setTab] = useState("CHATROOM");
@@ -63,12 +62,19 @@ const ChatRoom = () => {
   const { transcript, resetTranscript } = useSpeechRecognition();
   const [open, setOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [chosenEmoji, setChosenEmoji] = useState(null);
+  const [audio] = useState(new Audio(AudioFile));
   const [userData, setUserData] = useState({
     username: "",
     receivername: "",
     connected: false,
     message: "",
   });
+
+  const playSound = () => {
+    audio.play();
+  };
 
   useEffect(() => {
     console.log(userData);
@@ -85,6 +91,12 @@ const ChatRoom = () => {
     }
   }, [result]);
 
+  useEffect(() => {
+    if (chosenEmoji) {
+      setUserData({ ...userData, message: userData.message + chosenEmoji });
+    }
+  }, [chosenEmoji]);
+
   const handleClick = () => {
     setOpen(true);
   };
@@ -96,7 +108,6 @@ const ChatRoom = () => {
 
     setOpen(false);
   };
-
 
   const connect = () => {
     let sock = new SockJS("http://localhost:8080/ws");
@@ -114,10 +125,6 @@ const ChatRoom = () => {
     userJoin();
   };
 
-  const toggleAutoReply = () => {
-    setAutoReply(!autoReply);
-  };
-
   const userJoin = () => {
     var chatMessage = {
       senderName: userData.username,
@@ -126,19 +133,15 @@ const ChatRoom = () => {
     stompClient.send("/app/message", {}, JSON.stringify(chatMessage));
   };
 
-  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [chosenEmoji, setChosenEmoji] = useState(null);
-
   const onEmojiClick = (event, emojiObject) => {
     setChosenEmoji(emojiObject.emoji);
   };
 
-  useEffect(() => {
-    if (chosenEmoji) {
-      setUserData({ ...userData, message: userData.message + chosenEmoji });
-    }
-  }, [chosenEmoji]);
+  const toggleAutoReply = () => {
+    setAutoReply(!autoReply);
+  };
 
+  // AQUI ADICIONEI UMA CONDIÇÃO PARA RESPONDER A MENSAGEM
   const onMessageReceived = (payload) => {
     var payloadData = JSON.parse(payload.body);
     switch (payloadData.status) {
@@ -153,6 +156,8 @@ const ChatRoom = () => {
         setPublicChats([...publicChats]);
         break;
     }
+    /*SE O BOTÃO DO RP ESTIVER LIGADO E O NOME DO POSTADOR FOR DIFERENTE DO USUARIO 
+    ELE FAZ CHAMADA.*/
     if (
       autoReplyRef.current === true &&
       payloadData.senderName !== userData.username
@@ -165,9 +170,10 @@ const ChatRoom = () => {
     }
   };
 
-  // Demorei 10 mil anos pra tentar fazer isso funcionar sem fazer duas requisões na API
-  // Tudo isso por causa do true que não estava entrando no onMessageReceived e no onPrivateMessage
-  // Então lembrei do useRef e deu certo, gloriaaaaaaaaa.
+  /*Demorei 10 mil anos pra tentar fazer isso funcionar sem fazer duas requisões na API.
+  Tudo isso por causa do true que não estava entrando no onMessageReceived e no onPrivateMessage.
+  Então lembrei do useRef e deu certo, gloriaaaaaaaaa.*/
+
   const onPrivateMessage = (payload) => {
     var payloadData = JSON.parse(payload.body);
     if (privateChats.get(payloadData.senderName)) {
@@ -190,14 +196,15 @@ const ChatRoom = () => {
       );
     }
   };
-  
 
+  // FAZ UM POST PARA A API E RECEBE A RESPOSTA.
+  // TBM CRIE UM PROMPT PADRÃO PARA DAR UM CONTEXTO À IA.
   const generateAndSendReply = async (message, senderName, username) => {
     const response = await axios.post("http://localhost:3333/api/call", {
       prompt: `Você é ${username}, respondendo a mensagem de ${senderName}. Seja bem educado e conciso em suas respostas, seja muito humano. Mensagem: "${message}"`,
     });
-    setResult({data: response.data, senderName: senderName});
-};
+    setResult({ data: response.data, senderName: senderName });
+  };
 
   const onError = (err) => {
     console.log(err);
@@ -208,6 +215,8 @@ const ChatRoom = () => {
     setUserData({ ...userData, message: value });
   };
 
+
+  // POR ENQUANTO O AUTOREPLY SÓ ENVIA EM CHAT PRIVADO, ESTOU ARRUMANDO
   const sendAutoReply = (result) => {
     if (stompClient) {
       var chatMessage = {
@@ -221,11 +230,10 @@ const ChatRoom = () => {
       }
       chatMessage.receiverName = result.senderName;
       stompClient.send("/app/private-message", {}, JSON.stringify(chatMessage));
-  
+
       setUserData({ ...userData, message: "" });
     }
-};
-  
+  };
 
   const sendValue = () => {
     if (stompClient) {
@@ -266,7 +274,7 @@ const ChatRoom = () => {
     connect();
   };
 
-  // Renderização condicional para mostrar o registro ou o chat
+  // TELA PARA CONECTAR
   if (!userData.connected) {
     return (
       <div className="container">
@@ -292,6 +300,7 @@ const ChatRoom = () => {
     );
   }
 
+  // PAGINA PRINCIPAL
   return (
     <Grid container className="dark-container">
       <ThemeProvider theme={theme}>
@@ -305,8 +314,25 @@ const ChatRoom = () => {
             >
               <MenuIcon />
             </IconButton>
-            <Typography variant="h6" style={{ flexGrow: 1 }}>
-              Zap2
+            <Typography
+              variant="h6"
+              style={{ display: "flex", alignItems: "center" }}
+            >
+              <div>
+                <a href="#" onClick={playSound}>
+                  <img
+                    src="https://appsgeyser.io/geticon.php?widget=whatsapp%202_13754110&width=512"
+                    alt="zap2"
+                    //Esticado de proposito.
+                    style={{
+                      width: "150px",
+                      height: "50px",
+                      marginRight: "8px",
+                    }}
+                  />
+                </a>
+                Zap2
+              </div>
             </Typography>
           </Toolbar>
         </AppBar>
@@ -415,7 +441,7 @@ const ChatRoom = () => {
               autoHideDuration={6000}
               onClose={handleClose}
               anchorOrigin={{ vertical: "top", horizontal: "center" }}
-              style={{ marginTop: "45px" }} // Adicione marginTop: '70px'
+              style={{ marginTop: "45px" }}
             >
               <MuiAlert
                 onClose={handleClose}
@@ -466,7 +492,7 @@ const ChatRoom = () => {
               variant="outlined"
               style={{ flexGrow: 1, marginRight: "10px" }}
               onKeyDown={(ev) => {
-                if (ev.key === 'Enter') {
+                if (ev.key === "Enter") {
                   ev.preventDefault();
                   if (tab === "CHATROOM") {
                     sendValue();
@@ -508,4 +534,4 @@ const ChatRoom = () => {
   );
 };
 
-export default ChatRoom;
+export default Zap2;

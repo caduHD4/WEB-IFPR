@@ -1,10 +1,10 @@
 import logo from './logo.svg';
 import './App.css';
-import ChatRoom from './component/ChatRoom';
+import Zap2 from './component/Zap2';
 
 function App() {
   return (
-    <ChatRoom/>
+    <Zap2/>
   );
 }
 

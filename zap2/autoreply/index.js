@@ -1,4 +1,4 @@
-// EXPRESS
+// EXPRESS | CHAMA NA PORTA 3333
 const express = require('express');
 const app = express();
 app.use(express.json())
@@ -9,10 +9,10 @@ const cors = require('cors');
 app.use(cors());
 app.options('*', cors());
 
-// OPEN-AI
+// OPEN-AI | API KEY PARA FAZER AS REQUISIÇÕES
 const {Configuration, OpenAIApi} = require("openai");
 const config = new Configuration({
-    apiKey: "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",
+    apiKey: "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",
 });
 const openai = new OpenAIApi(config);
 
