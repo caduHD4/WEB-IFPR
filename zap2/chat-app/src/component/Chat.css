@@ -98,4 +98,13 @@ button:hover {
   transform: translateX(0);
 }
 
+.botao-autoReply{
+  border: none;
+  padding: 10px;
+  background: #3f51b5;
+  color:#fff;
+  font-size: 1.2em;
+  font-weight: bold;
+}
+
 

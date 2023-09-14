@@ -12,7 +12,7 @@ app.options('*', cors());
 // OPEN-AI
 const {Configuration, OpenAIApi} = require("openai");
 const config = new Configuration({
-    apiKey: "",
+    apiKey: "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",
 });
 const openai = new OpenAIApi(config);
 
@@ -24,7 +24,7 @@ app.post('/api/call', async (req, res) => {
       model: "text-davinci-003",
       prompt: req.body.prompt,
       max_tokens: 200,
-      temperature: 0,
+      temperature: 0.8,
     });
     return response.data;
   };

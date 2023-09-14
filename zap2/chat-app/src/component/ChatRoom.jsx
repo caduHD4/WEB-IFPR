@@ -4,6 +4,12 @@ import { over } from "stompjs";
 import EmojiPicker from "emoji-picker-react";
 import MenuIcon from "@material-ui/icons/Menu";
 import axios from "axios";
+import MicIcon from "@material-ui/icons/Mic";
+import MicOffIcon from "@material-ui/icons/MicOff";
+import AndroidIcon from "@material-ui/icons/Android";
+import SpeechRecognition, {
+  useSpeechRecognition,
+} from "react-speech-recognition";
 import { createMuiTheme, ThemeProvider } from "@material-ui/core/styles";
 import {
   AppBar,
@@ -22,7 +28,9 @@ import {
   TextField,
   Toolbar,
   Typography,
+  Snackbar,
 } from "@material-ui/core";
+import MuiAlert from "@material-ui/lab/Alert";
 import ChatIcon from "@material-ui/icons/Chat";
 import SendIcon from "@material-ui/icons/Send";
 import PhotoCamera from "@material-ui/icons/PhotoCamera";
@@ -51,6 +59,9 @@ const ChatRoom = () => {
   const [result, setResult] = useState("");
   const [autoReply, setAutoReply] = useState(false);
   const autoReplyRef = useRef(autoReply);
+  const [isRecording, setIsRecording] = useState(false);
+  const { transcript, resetTranscript } = useSpeechRecognition();
+  const [open, setOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [userData, setUserData] = useState({
     username: "",
@@ -73,6 +84,19 @@ const ChatRoom = () => {
       setResult("");
     }
   }, [result]);
+
+  const handleClick = () => {
+    setOpen(true);
+  };
+
+  const handleClose = (event, reason) => {
+    if (reason === "clickaway") {
+      return;
+    }
+
+    setOpen(false);
+  };
+
 
   const connect = () => {
     let sock = new SockJS("http://localhost:8080/ws");
@@ -162,16 +186,18 @@ const ChatRoom = () => {
       generateAndSendReply(
         payloadData.message,
         payloadData.senderName,
-        userData.username);
+        userData.username
+      );
     }
   };
+  
 
   const generateAndSendReply = async (message, senderName, username) => {
     const response = await axios.post("http://localhost:3333/api/call", {
       prompt: `Você é ${username}, respondendo a mensagem de ${senderName}. Seja bem educado e conciso em suas respostas, seja muito humano. Mensagem: "${message}"`,
     });
-    setResult(response.data);
-  };
+    setResult({data: response.data, senderName: senderName});
+};
 
   const onError = (err) => {
     console.log(err);
@@ -182,18 +208,24 @@ const ChatRoom = () => {
     setUserData({ ...userData, message: value });
   };
 
-  const sendAutoReply = (message) => {
-    console.log("funcionou muitoooo");
+  const sendAutoReply = (result) => {
     if (stompClient) {
       var chatMessage = {
         senderName: userData.username,
-        message: message,
+        message: result.data,
         status: "MESSAGE",
       };
-      stompClient.send("/app/message", {}, JSON.stringify(chatMessage));
+      if (result.senderName !== userData.username) {
+        privateChats.get(result.senderName).push(chatMessage);
+        setPrivateChats(new Map(privateChats));
+      }
+      chatMessage.receiverName = result.senderName;
+      stompClient.send("/app/private-message", {}, JSON.stringify(chatMessage));
+  
       setUserData({ ...userData, message: "" });
     }
-  };
+};
+  
 
   const sendValue = () => {
     if (stompClient) {
@@ -317,7 +349,7 @@ const ChatRoom = () => {
         </Slide>
       )}
 
-      <Grid item xs={9}>
+      <Grid item xs={menuOpen ? 9 : 12}>
         <Paper
           style={{
             height: "calc(100vh - 64px)",
@@ -366,14 +398,57 @@ const ChatRoom = () => {
             }}
           >
             <Button
+              className="ButtonAuto"
               variant="contained"
               color="primary"
-              onClick={toggleAutoReply}
+              onClick={() => {
+                toggleAutoReply();
+                handleClick();
+              }}
+              title="Auto Reply"
             >
-              Resposta automática: {autoReply ? "Ligada" : "Desligada"}
+              <AndroidIcon style={{ color: autoReply ? "green" : "red" }} />
             </Button>
 
-            <IconButton onClick={() => setShowEmojiPicker(!showEmojiPicker)}>
+            <Snackbar
+              open={open}
+              autoHideDuration={6000}
+              onClose={handleClose}
+              anchorOrigin={{ vertical: "top", horizontal: "center" }}
+              style={{ marginTop: "45px" }} // Adicione marginTop: '70px'
+            >
+              <MuiAlert
+                onClose={handleClose}
+                severity={autoReply ? "success" : "error"}
+                elevation={6}
+                variant="filled"
+              >
+                Auto Reply{" "}
+                {autoReply
+                  ? "Ligada | A conversa será respodida automaticamente"
+                  : "Desligada"}
+              </MuiAlert>
+            </Snackbar>
+            <IconButton
+              title="Transcritor de fala"
+              onClick={() => {
+                if (isRecording) {
+                  SpeechRecognition.stopListening();
+                  setUserData({ ...userData, message: transcript });
+                } else {
+                  resetTranscript(); // Limpa o transcript
+                  SpeechRecognition.startListening({ continuous: true });
+                }
+                setIsRecording(!isRecording);
+              }}
+            >
+              {isRecording ? <MicIcon /> : <MicOffIcon />}
+            </IconButton>
+
+            <IconButton
+              title="Emojis"
+              onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            >
               <InsertEmoticonIcon />
             </IconButton>
             {showEmojiPicker && (
@@ -390,29 +465,37 @@ const ChatRoom = () => {
               onChange={handleMessage}
               variant="outlined"
               style={{ flexGrow: 1, marginRight: "10px" }}
+              onKeyDown={(ev) => {
+                if (ev.key === 'Enter') {
+                  ev.preventDefault();
+                  if (tab === "CHATROOM") {
+                    sendValue();
+                  } else {
+                    sendPrivateValue();
+                  }
+                }
+              }}
               InputProps={{
                 endAdornment: (
                   <InputAdornment position="end">
                     {tab === "CHATROOM" ? (
                       <Button
+                        title="Nada mais nada menos do que um botão de enviar"
                         variant="contained"
                         color="primary"
                         endIcon={<SendIcon />}
                         onClick={sendValue}
-                        style={{ borderRadius: "12px" }}
-                      >
-                        Enviar
-                      </Button>
+                        style={{ borderRadius: "20px", justifyContent: "left" }}
+                      ></Button>
                     ) : (
                       <Button
+                        title="Nada mais nada menos do que um botão de enviar"
                         variant="contained"
                         color="primary"
                         endIcon={<SendIcon />}
                         onClick={sendPrivateValue}
-                        style={{ borderRadius: "12px" }}
-                      >
-                        Enviar
-                      </Button>
+                        style={{ borderRadius: "12px", justifyContent: "left" }}
+                      ></Button>
                     )}
                   </InputAdornment>
                 ),
